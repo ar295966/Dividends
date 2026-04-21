@@ -52,7 +52,7 @@
     background: var(--bg); border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 8px; min-height: 30px;
   }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background 0.3s; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
   .dot.loading { background: var(--accent); animation: pulse 1s infinite; }
   .dot.done    { background: var(--green); }
   .dot.error   { background: var(--red); }
@@ -64,8 +64,7 @@
   th {
     padding: 11px 16px; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
     color: var(--muted); text-align: right; font-weight: 400;
-    border-bottom: 1px solid var(--border); white-space: nowrap;
-    user-select: none;
+    border-bottom: 1px solid var(--border); white-space: nowrap; user-select: none;
   }
   th:first-child, th:nth-child(2) { text-align: left; }
   th[data-col] { cursor: pointer; }
@@ -92,7 +91,7 @@
   .yield-mid  { background: rgba(201,168,76,0.12); color: var(--accent); }
   .yield-low  { background: rgba(90,106,126,0.2);  color: var(--dim); }
 
-  .income-cell { color: var(--green);  font-variant-numeric: tabular-nums; }
+  .income-cell { color: var(--green);   font-variant-numeric: tabular-nums; }
   .value-cell  { color: var(--accent2); font-variant-numeric: tabular-nums; }
 
   .footer { padding: 18px 32px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); }
@@ -160,10 +159,12 @@
 </div>
 
 <div class="footer">
-  Data from Yahoo Finance · Prices and forward dividends are estimates · Not financial advice
+  Data from Financial Modeling Prep · Prices and forward dividends are estimates · Not financial advice
 </div>
 
 <script>
+const API_KEY = 'cLNAsr3TrWVwLx9rC8NphFr2rPd5z1c3';
+
 const HOLDINGS = [
   { ticker:'AAPL', name:'Apple Inc.',                  shares:224  },
   { ticker:'BDX',  name:'Becton, Dickinson and Co.',   shares:55   },
@@ -180,10 +181,13 @@ const HOLDINGS = [
   { ticker:'XOM',  name:'Exxon Mobil Corp.',           shares:2521 },
 ];
 
-let store = HOLDINGS.map(h => ({ ...h, price:null, annDiv:null, yield:null, income:null, value:null, status:'idle' }));
+// FMP batch quote endpoint — all 13 tickers in a single call
+const TICKERS = HOLDINGS.map(h => h.ticker).join(',');
+
+let store = HOLDINGS.map(h => ({ ...h, price:null, annDiv:null, divYield:null, status:'idle' }));
 let sortCol = null, sortDir = -1;
 
-const fmt$  = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const fmt$   = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
 const fmtPct = n => n.toFixed(2) + '%';
 const yieldClass = y => y >= 5 ? 'yield-high' : y >= 2.5 ? 'yield-mid' : 'yield-low';
 
@@ -208,12 +212,10 @@ function renderTable() {
   if (sortCol) {
     rows.sort((a,b) => {
       let av, bv;
-      if      (sortCol==='income') { av=(a.annDiv||0)*a.shares;     bv=(b.annDiv||0)*b.shares; }
-      else if (sortCol==='value')  { av=(a.price||0)*a.shares;      bv=(b.price||0)*b.shares; }
-      else if (sortCol==='yield')  { av=a.price?(a.annDiv||0)/a.price*100:0; bv=b.price?(b.annDiv||0)/b.price*100:0; }
+      if      (sortCol==='income') { av=(a.annDiv||0)*a.shares;  bv=(b.annDiv||0)*b.shares; }
+      else if (sortCol==='value')  { av=(a.price||0)*a.shares;   bv=(b.price||0)*b.shares; }
+      else if (sortCol==='yield')  { av=a.divYield||0;           bv=b.divYield||0; }
       else { av=a[sortCol]||0; bv=b[sortCol]||0; }
-      if (av==null&&bv==null) return 0;
-      if (av==null) return 1; if (bv==null) return -1;
       return (av-bv)*sortDir;
     });
   }
@@ -221,26 +223,26 @@ function renderTable() {
   document.getElementById('tbody').innerHTML = rows.map(r => {
     const L = r.status==='loading', E = r.status==='error';
     const dash = L ? `<span class="loading-cell">···</span>` : `<span class="err-cell">—</span>`;
-    const yld  = r.price && r.annDiv ? r.annDiv/r.price*100 : null;
-    const inc  = r.annDiv ? r.annDiv*r.shares : null;
-    const val  = r.price  ? r.price *r.shares : null;
-    const yp   = yld!=null ? `<span class="yield-pill ${yieldClass(yld)}">${fmtPct(yld)}</span>` : dash;
+    const inc  = r.annDiv != null ? r.annDiv * r.shares : null;
+    const val  = r.price  != null ? r.price  * r.shares : null;
+    const yp   = r.divYield != null
+      ? `<span class="yield-pill ${yieldClass(r.divYield)}">${fmtPct(r.divYield)}</span>`
+      : dash;
     return `<tr>
       <td><span class="ticker-badge">${r.ticker}</span></td>
       <td><span class="co-name">${r.name}</span></td>
       <td>${r.shares.toLocaleString()}</td>
-      <td>${r.price!=null ? fmt$(r.price) : dash}</td>
-      <td>${r.annDiv!=null ? fmt$(r.annDiv) : dash}</td>
+      <td>${r.price  != null ? fmt$(r.price)  : dash}</td>
+      <td>${r.annDiv != null ? fmt$(r.annDiv) : dash}</td>
       <td>${yp}</td>
-      <td class="income-cell">${inc!=null ? fmt$(inc) : dash}</td>
-      <td class="value-cell">${val!=null  ? fmt$(val) : dash}</td>
+      <td class="income-cell">${inc != null ? fmt$(inc) : dash}</td>
+      <td class="value-cell">${val != null  ? fmt$(val) : dash}</td>
     </tr>`;
   }).join('');
 
   updateSummary();
 }
 
-// Sort header wiring
 document.querySelectorAll('th[data-col]').forEach(th => {
   th.addEventListener('click', () => {
     const col = th.dataset.col;
@@ -252,25 +254,6 @@ document.querySelectorAll('th[data-col]').forEach(th => {
   });
 });
 
-// Yahoo Finance via corsproxy.io — single call per ticker using v7 quote endpoint
-async function fetchTicker(ticker) {
-  const yUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}&fields=regularMarketPrice,dividendRate,dividendYield,trailingAnnualDividendRate,trailingAnnualDividendYield`;
-  const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(yUrl)}`, {
-    signal: AbortSignal.timeout(15000)
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const text = await res.text();
-  if (!text || text.trim()[0] !== '{') throw new Error('Non-JSON response');
-  const data = JSON.parse(text);
-  const q = data?.quoteResponse?.result?.[0];
-  if (!q) throw new Error('No result');
-  const price   = q.regularMarketPrice ?? null;
-  const annDiv  = q.dividendRate ?? q.trailingAnnualDividendRate ?? null;
-  const rawYld  = q.dividendYield ?? q.trailingAnnualDividendYield ?? null;
-  const divYield = rawYld != null ? rawYld * 100 : (annDiv && price ? annDiv/price*100 : null);
-  return { price, annDiv, divYield };
-}
-
 async function loadAll() {
   const btn  = document.getElementById('refresh-btn');
   const bar  = document.getElementById('load-bar');
@@ -279,29 +262,51 @@ async function loadAll() {
   bar.classList.add('active');
   fill.style.width = '0%';
 
-  store = store.map(r => ({ ...r, price:null, annDiv:null, yield:null, income:null, value:null, status:'loading' }));
+  store = store.map(r => ({ ...r, price:null, annDiv:null, divYield:null, status:'loading' }));
   renderTable();
-  setStatus('Fetching from Yahoo Finance…', 'loading');
+  setStatus('Fetching from Financial Modeling Prep…', 'loading');
 
-  let done = 0;
-  const total = store.length;
+  try {
+    // Single batch call for all prices
+    const quoteRes = await fetch(
+      `https://financialmodelingprep.com/api/v3/quote/${TICKERS}?apikey=${API_KEY}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
+    if (!quoteRes.ok) throw new Error(`Quote HTTP ${quoteRes.status}`);
+    const quotes = await quoteRes.json();
 
-  await Promise.all(store.map(async (row, i) => {
-    try {
-      const { price, annDiv, divYield } = await fetchTicker(row.ticker);
-      store[i].price  = price;
-      store[i].annDiv = annDiv;
-      store[i].yield  = divYield;
-      store[i].status = 'ok';
-    } catch(e) {
-      store[i].status = 'error';
-      console.warn(row.ticker, e.message);
-    }
-    done++;
-    fill.style.width = (done/total*100) + '%';
-    setStatus(`Loading… ${done} of ${total}`, 'loading');
-    renderTable();
-  }));
+    fill.style.width = '50%';
+    setStatus('Loading dividend data…', 'loading');
+
+    // Single batch call for dividend/profile data
+    const profRes = await fetch(
+      `https://financialmodelingprep.com/api/v3/profile/${TICKERS}?apikey=${API_KEY}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
+    if (!profRes.ok) throw new Error(`Profile HTTP ${profRes.status}`);
+    const profiles = await profRes.json();
+
+    fill.style.width = '90%';
+
+    // Map results back to store
+    store = store.map(row => {
+      const q = quotes.find(x => x.symbol === row.ticker);
+      const p = profiles.find(x => x.symbol === row.ticker);
+      if (!q) return { ...row, status:'error' };
+
+      const price    = q.price ?? null;
+      const annDiv   = p?.lastDiv != null ? p.lastDiv : null;  // FMP lastDiv = annual dividend
+      const divYield = p?.dividendYield != null
+        ? p.dividendYield * 100
+        : (annDiv && price ? annDiv/price*100 : null);
+
+      return { ...row, price, annDiv, divYield, status:'ok' };
+    });
+
+  } catch(e) {
+    store = store.map(r => ({ ...r, status:'error' }));
+    console.error(e);
+  }
 
   fill.style.width = '100%';
   setTimeout(() => bar.classList.remove('active'), 600);
@@ -311,10 +316,11 @@ async function loadAll() {
   document.getElementById('last-updated').textContent = 'Updated ' + now.toLocaleTimeString();
   setStatus(
     errs.length
-      ? `${total-errs.length}/${total} loaded · Failed: ${errs.map(r=>r.ticker).join(', ')}`
-      : `All ${total} holdings loaded · ${now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`,
+      ? `${store.length - errs.length}/${store.length} loaded · Failed: ${errs.map(r=>r.ticker).join(', ')}`
+      : `All ${store.length} holdings loaded · ${now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`,
     errs.length ? 'error' : 'done'
   );
+  renderTable();
   btn.disabled = false;
 }
 
