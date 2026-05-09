@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Broadside — The State of AI at Work</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700;800;900&family=IBM+Plex+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --c-bg: #111111;
+        --c-bg-orange: #e85d26;
+        --c-fg: #f0ece5;
+        --c-fg-2: #888880;
+        --c-fg-3: #505048;
+        --c-fg-light: #111111;
+        --c-fg-light-2: #2a1810;
+        --c-fg-light-3: rgba(17,17,17,0.55);
+        --c-accent: #e85d26;
+        --c-border: #282826;
+        --f-display: "Barlow", "Noto Sans SC", sans-serif;
+        --f-heading: "Barlow", "Noto Sans SC", sans-serif;
+        --f-body: "Barlow", "Noto Sans SC", system-ui, sans-serif;
+        --f-mono: "IBM Plex Mono", monospace;
+        --sz-display: 13vw;
+        --sz-h1: 7.5vw;
+        --sz-lead: 1.6vw;
+        --sz-label: 0.72vw;
+        --pad-x: 5.5vw;
+        --pad-y: 5.5vh;
+        --gap-lg: 3.5vh;
+        --gap-md: 2vh;
+        --gap-sm: 1vh;
+        --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+        --dur-enter: 0.5s;
+      }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { width: 100%; height: 100%; overflow: hidden; background: var(--c-bg); -webkit-font-smoothing: antialiased; }
+
+      #deck { display: flex; height: 100vh; }
+      .slide {
+        flex: 0 0 100vw; width: 100vw; height: 100vh;
+        position: relative; padding: var(--pad-y) var(--pad-x);
+        display: grid; grid-template-rows: auto 1fr auto; overflow: hidden;
+      }
+      .slide.orange { background: var(--c-bg-orange); color: var(--c-fg-light); }
+
+      [data-anim] { opacity: 0; }
+      .slide.is-active [data-anim] {
+        animation-duration: var(--dur-enter);
+        animation-timing-function: var(--ease-enter);
+        animation-fill-mode: forwards;
+      }
+      .slide.is-active [data-anim="fade-up"] { animation-name: kFadeUp; }
+      .slide.is-active [data-anim="fade-in"] { animation-name: kFadeIn; }
+      [data-delay="0"] { animation-delay: 0s; }
+      [data-delay="1"] { animation-delay: 0.08s; }
+      [data-delay="2"] { animation-delay: 0.18s; }
+      [data-delay="3"] { animation-delay: 0.3s; }
+
+      @keyframes kFadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+      @keyframes kFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+      .display { font-family: var(--f-display); font-size: var(--sz-display); font-weight: 900; line-height: 0.88; letter-spacing: -0.04em; }
+      .lead { font-family: var(--f-body); font-size: var(--sz-lead); font-weight: 400; line-height: 1.5; }
+
+      .slide--cover { display: flex; flex-direction: column; justify-content: flex-end; }
+      .cover-body { display: flex; flex-direction: column; flex: 1; justify-content: flex-end; gap: var(--gap-md); }
+      .cover-meta { display: flex; justify-content: space-between; align-items: flex-end; margin-top: var(--gap-lg); padding-top: var(--gap-sm); border-top: 1px solid rgba(17,17,17,0.2); }
+
+      .broadside-num { font-family: var(--f-mono); font-size: 1.1vw; font-weight: 500; letter-spacing: 0.1em; color: rgba(17,17,17,0.45); }
+      .corner-label { font-family: var(--f-mono); font-size: var(--sz-label); letter-spacing: 0.1em; text-transform: uppercase; color: rgba(17,17,17,0.4); }
+      .broadside-top-chrome { display: flex; justify-content: space-between; align-items: center; margin-bottom: auto; }
+
+      .orange .display, .orange .h1 { color: #111111; }
+      .orange .lead { color: rgba(17,17,17,0.75); }
+    </style>
+  </head>
+  <body>
+    <div id="deck">
+      <section class="slide slide--cover orange is-active">
+        <div class="broadside-top-chrome">
+          <span class="broadside-num" data-anim="fade-in" data-delay="0">01</span>
+          <span class="corner-label" data-anim="fade-in" data-delay="0">Research Synthesis · 2026</span>
+        </div>
+        <div class="cover-body">
+          <h1 class="display" data-anim="fade-up" data-delay="1" style="max-width: 95%; color: #111;">
+            the state<br />of ai<br />at work
+          </h1>
+          <p class="lead" data-anim="fade-up" data-delay="2" style="opacity: 0.65; max-width: 55%; color: #111;">
+            How artificial intelligence is reshaping how teams operate, decide, and create — May 2026.
+          </p>
+        </div>
+        <div class="cover-meta" data-anim="fade-in" data-delay="3">
+          <span class="broadside-num">Research Team</span>
+          <span class="broadside-num">May 2026 · Synthesis Report</span>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // Kick off animations on load
+      document.querySelector('.slide').classList.add('is-active');
+    </script>
+  </body>
+</html>
